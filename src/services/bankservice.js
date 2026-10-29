@@ -51,3 +51,5 @@ export const getAdminTransactions = (params) => api.get("/api/admin/transactions
 export const getAdminFds = (status) => api.get("/api/admin/fd", { params: { status } });
 export const freezeAccount = (no) => api.put(`/api/admin/freeze/${no}`);
 export const unfreezeAccount = (no) => api.put(`/api/admin/unfreeze/${no}`);
+export const adminDeposit = (no, data) => api.post(`/api/admin/accounts/${no}/deposit`, data);
+export const adminWithdraw = (no, data) => api.post(`/api/admin/accounts/${no}/withdraw`, data);

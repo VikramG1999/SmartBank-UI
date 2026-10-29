@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import Layout from "../components/Layout";
 import {
   getStats, getUsers, getAdminAccounts, getAdminTransactions, getAdminFds, freezeAccount, unfreezeAccount,
+  adminDeposit, adminWithdraw,
 } from "../services/bankservice";
-import { errMsg, money, openPicker } from "../services/helper";
+import { errMsg, money, openPicker, amountRules } from "../services/helper";
 
 const AdminDashboard = () => {
   const [tab, setTab] = useState("accounts");
@@ -16,6 +17,8 @@ const AdminDashboard = () => {
   const [tx, setTx] = useState({ content: [], page: 0, totalPages: 0, totalElements: 0 });
   const [error, setError] = useState("");
   const { register, getValues, handleSubmit } = useForm({ defaultValues: { account: "", type: "", from: "", to: "" } });
+  const movement = useForm({ defaultValues: { accountNumber: "", amount: "" } });
+  const [moneyMsg, setMoneyMsg] = useState("");
 
   const loadMain = () => {
     getStats().then((r) => setStats(r.data)).catch((e) => setError(errMsg(e)));
@@ -34,6 +37,21 @@ const AdminDashboard = () => {
     loadTx(0);
     loadFds("");
   }, []);
+
+    const onMovement = (kind) => (d) => {
+    const call = kind === "deposit" ? adminDeposit : adminWithdraw;
+    call(d.accountNumber.trim().toUpperCase(), { amount: Number(d.amount) })
+      .then(() => {
+        setMoneyMsg(kind === "deposit" ? "Deposit successful" : "Withdrawal successful");
+        setError("");
+        movement.reset({ accountNumber: "", amount: "" });
+        loadMain();
+      })
+      .catch((e) => {
+        setError(errMsg(e));
+        setMoneyMsg("");
+      });
+  };
 
   const toggle = (a) => {
     const call = a.status === "ACTIVE" ? freezeAccount : unfreezeAccount;
@@ -71,6 +89,55 @@ const AdminDashboard = () => {
           </li>
         ))}
       </ul>
+
+            {tab === "accounts" && (
+        <div className="card p-4 mb-3">
+          <h5>Deposit or withdraw from a customer account</h5>
+          <div className="row g-2 align-items-start">
+            <div className="col-md-4">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Account number"
+                {...movement.register("accountNumber", { required: "Enter an account number" })}
+              />
+              {movement.formState.errors.accountNumber && (
+                <span style={{ color: "red" }}>{movement.formState.errors.accountNumber.message}</span>
+              )}
+            </div>
+            <div className="col-md-3">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Amount"
+                {...movement.register("amount", amountRules)}
+              />
+              {movement.formState.errors.amount && (
+                <span style={{ color: "red" }}>{movement.formState.errors.amount.message}</span>
+              )}
+            </div>
+            <div className="col-md-2">
+              <button
+                type="button"
+                className="btn btn-success w-100"
+                onClick={movement.handleSubmit(onMovement("deposit"))}
+              >
+                Deposit
+              </button>
+            </div>
+            <div className="col-md-2">
+              <button
+                type="button"
+                className="btn btn-warning w-100"
+                onClick={movement.handleSubmit(onMovement("withdraw"))}
+              >
+                Withdraw
+              </button>
+            </div>
+          </div>
+          {moneyMsg && <div className="text-success mt-2">{moneyMsg}</div>}
+        </div>
+      )}
 
       <div className="card p-4 mb-4">
         {tab === "accounts" && (
